@@ -1,9 +1,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 
-sf::Font font;
-
-bool collision(const sf::ConvexShape& obj1, const sf::ConvexShape& obj2, sf::RenderWindow& window)
+bool collision(const sf::ConvexShape& obj1, const sf::ConvexShape& obj2) 
 {
     sf::Vector2f axes[obj1.getPointCount() + obj2.getPointCount()];
     sf::Vector2f obj1_points[obj1.getPointCount()];
@@ -19,19 +17,11 @@ bool collision(const sf::ConvexShape& obj1, const sf::ConvexShape& obj2, sf::Ren
         axes[i + obj1.getPointCount()] = obj2_points[i] - obj2_points[(i+1)%obj2.getPointCount()];
 
     bool collision = true;
-    float xpos = 60.0f;
     for(auto axis : axes)
     {
         axis /= std::sqrt(axis.x * axis.x + axis.y * axis.y);
         std::swap(axis.x, axis.y);
         axis.y *= -1;
-        sf::RectangleShape axis_shape;
-        axis_shape.setSize({2, 60});
-        axis_shape.setOrigin(1, 0);
-        axis_shape.setPosition(xpos,300);
-        axis_shape.setFillColor(sf::Color::Blue);
-        axis_shape.setRotation(-std::atan2(axis.x, axis.y) * 180.0f / 3.141f);
-        window.draw(axis_shape);
         float obj1_min, obj1_max, obj2_min, obj2_max;
 
         obj1_min = obj2_min = 100000;
@@ -49,95 +39,18 @@ bool collision(const sf::ConvexShape& obj1, const sf::ConvexShape& obj2, sf::Ren
             obj2_min = std::min(obj2_min, projection);
             obj2_max = std::max(obj2_max, projection);
         }
-        sf::Text o1i("" + std::to_string(obj1_min), font);
-        o1i.setCharacterSize(12);
-        o1i.setColor(sf::Color::Black);
-        sf::Text o1a("" + std::to_string(obj1_max), font);
-        o1a.setCharacterSize(12);
-        o1a.setColor(sf::Color::Black);
-        sf::Text o2i("" + std::to_string(obj2_min), font);
-        o2i.setCharacterSize(12);
-        o2i.setColor(sf::Color::Black);
-        sf::Text o2a("" + std::to_string(obj2_max), font);
-        o2a.setCharacterSize(12);
-        o2a.setColor(sf::Color::Black);
-
-        o1i.setPosition(xpos-40, 400); 
-        o1a.setPosition(xpos-40, 440);
-        o2i.setPosition(xpos-40, 480);
-        o2a.setPosition(xpos-40, 520);
-        window.draw(o1i);
-        window.draw(o1a);
-        window.draw(o2i);
-        window.draw(o2a);
-
-        float max = std::max(obj2_max, obj1_max); 
-        float min = std::min(obj2_min, obj1_min);
-        float dist = max - min;
-        obj1_min -= min;
-        obj2_min -= min;
-        obj1_max -= min;
-        obj2_max -= min;
-
-        float fac = 60/dist;
-        obj1_min *= fac;
-        obj2_min *= fac;
-        obj1_max *= fac;
-        obj2_max *= fac;
-
-        sf::RectangleShape points[4];
-        for(auto& point : points)
-        {
-            point.setSize({5.0f, 10.0f});
-            point.setOrigin(2.5f, 2.5f);
-            point.setPosition(xpos, 300);
-        }
-        points[0].move(axis * obj2_min);
-        points[1].move(axis * obj2_max);
-        points[0].setFillColor(sf::Color::Green);
-        points[1].setFillColor(sf::Color::Blue);
-        points[2].move(axis * obj1_min);
-        points[3].move(axis * obj1_max);
-        points[2].setFillColor(sf::Color::Magenta);
-        points[3].setFillColor(sf::Color::Red);
-        for(auto point : points)
-            window.draw(point);
-
         if(obj1_min > obj2_max || obj2_min > obj1_max)
         {
             collision = false;
         }
-        //if(!collision)
-        xpos += 125;
-        //    break;
+        if(!collision)
+            break;
     }
     return collision;
 }
 
-void draw_normals(const sf::ConvexShape& obj, sf::RenderWindow& window)
-{
-    for(int i = 0; i < obj.getPointCount(); ++i)
-    {
-        sf::Vector2f point_1 = obj.getTransform().transformPoint(obj.getPoint(i));
-        sf::Vector2f point_2 = obj.getTransform().transformPoint(obj.getPoint((i+1)%obj.getPointCount()));
-        sf::Vector2f axis_position = 0.5f * (point_1 + point_2);
-        sf::Vector2f axis_direction = point_1 - point_2;
-        axis_direction /= std::sqrt(axis_direction.x * axis_direction.x + axis_direction.y * axis_direction.y);
-        std::swap(axis_direction.x, axis_direction.y);
-        axis_direction.y *= -1;
-        sf::RectangleShape line;
-        line.setSize({2, 50});
-        line.setOrigin(1.0f, 0);
-        line.setFillColor(sf::Color::Blue);
-        line.setPosition(axis_position);
-        line.setRotation(-std::atan2(axis_direction.x, axis_direction.y) * 180.0f / 3.141f);
-        window.draw(line);
-    }
-}
-
 int main(int argc, char* argv[])
 {
-    font.loadFromFile("../../sfml_sat/res/FreeMono.ttf");
     sf::RenderWindow window(sf::VideoMode(1000, 600), "sfml_sat");
     window.setFramerateLimit(60);
 
@@ -161,10 +74,10 @@ int main(int argc, char* argv[])
     objects[1].setPoint(1, sf::Vector2f(0, 50));
     objects[1].setPoint(2, sf::Vector2f(100, 50));
     objects[1].setPoint(3, sf::Vector2f(100, 30));
-    objects[1].setPoint(4, sf::Vector2f(80, 0));
+    objects[1].setPoint(4, sf::Vector2f(50, 0));
     objects[1].setPosition(200, 200);
 
-    int selected_rect = 0;
+    int selected_object = 0;
     bool moving = true;
     sf::Vector2f rotation_center;
 
@@ -175,13 +88,13 @@ int main(int argc, char* argv[])
         {
             if(event.type == sf::Event::KeyPressed)
                 if(event.key.code == sf::Keyboard::Tab)
-                    selected_rect = 1 - selected_rect;
+                    selected_object = 1 - selected_object;
             if(event.type == sf::Event::MouseButtonPressed)
             {
                 if(event.mouseButton.button == sf::Mouse::Left)
                 {
                     moving = false;
-                    rotation_center = objects[selected_rect].getPosition();
+                    rotation_center = objects[selected_object].getPosition();
                 }
             }
             if(event.type == sf::Event::MouseButtonReleased)
@@ -196,11 +109,11 @@ int main(int argc, char* argv[])
             {
                 if(moving)
                 {
-                    objects[selected_rect].setPosition(event.mouseMove.x, event.mouseMove.y);
+                    objects[selected_object].setPosition(event.mouseMove.x, event.mouseMove.y);
                 }
                 else
                 {
-                    objects[selected_rect].setRotation(-180 / 3.141f * std::atan2(event.mouseMove.x - rotation_center.x, event.mouseMove.y - rotation_center.y));
+                    objects[selected_object].setRotation(-180 / 3.141f * std::atan2(event.mouseMove.x - rotation_center.x, event.mouseMove.y - rotation_center.y));
                 }
             }
             if(event.type == sf::Event::Closed)
@@ -208,7 +121,7 @@ int main(int argc, char* argv[])
         }
         window.clear(sf::Color::White);
 
-        if(collision(objects[0], objects[1], window))
+        if(collision(objects[0], objects[1]))
         {
             objects[0].setFillColor(sf::Color::Red);
             objects[1].setFillColor(sf::Color::Red);
@@ -221,8 +134,6 @@ int main(int argc, char* argv[])
 
         for(const auto& obj : objects)
             window.draw(obj);
-        for(const auto& obj : objects)
-            draw_normals(obj, window);
         window.display();
     }
 }

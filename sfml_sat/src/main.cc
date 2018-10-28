@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cmath>
 #include <SFML/Graphics.hpp>
 
 bool collision(const sf::ConvexShape& obj1, const sf::ConvexShape& obj2) 
